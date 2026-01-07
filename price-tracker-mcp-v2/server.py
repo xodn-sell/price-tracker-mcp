@@ -257,17 +257,18 @@ def get_best_deals(limit: int = 10) -> dict:
         }
 
 if __name__ == "__main__":
-    # 설정 검증
+    # 환경변수 검증
     if Config.validate():
         print("✅ API 설정 완료")
         print(f"📊 설정 정보: {Config.get_api_info()}")
-        print("\n🚀 MCP 서버 시작 중 (Streamable HTTP)...")
+        print("\n🚀 [PlayMCP 호환] Streamable HTTP 서버 시작 중...")
+        print("📍 외부 접속: 0.0.0.0:8000")
         
         # PlayMCP 호환 설정
-        # transport='http' - PlayMCP가 요구하는 Streamable HTTP 방식
-        # host='0.0.0.0' - 외부 접속 허용
-        # port=8000 - Cloudtype 기본 포트
-        mcp.run(transport='http', host='0.0.0.0', port=8000)
+        # - transport='streamable-http': MCP 2025-03-26 표준 (PlayMCP 필수)
+        # - host='0.0.0.0': 외부 접속 허용 (Cloudtype/Docker 필수)
+        # - port=8000: Cloudtype 기본 포트
+        mcp.run(transport='streamable-http', host='0.0.0.0', port=8000)
     else:
-        print("\n❌ API 설정을 완료한 후 서버를 시작하세요.")
-        print("💡 환경변수를 확인하고 필수 API 키를 입력하세요.")
+        print("\n❌ 환경변수 설정이 필요합니다")
+        print("💡 Cloudtype 환경변수에서 NAVER_CLIENT_ID와 NAVER_CLIENT_SECRET을 확인하세요")
