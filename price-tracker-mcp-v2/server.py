@@ -268,7 +268,7 @@ if __name__ == "__main__":
         # 기본 포트는 8000번입니다.
         try:
             # 최신 FastMCP 방식
-            mcp.run(transport='sse')
+            mcp.run(transport='sse', host='0.0.0.0', port=8000)
         except TypeError:
             # 만약 에러가 나면 수동으로 uvicorn 실행 (비상용)
             import uvicorn
