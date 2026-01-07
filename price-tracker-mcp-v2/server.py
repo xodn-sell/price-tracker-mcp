@@ -255,7 +255,11 @@ def get_best_deals(limit: int = 10) -> dict:
             "error": str(e),
             "message": f"베스트 딜 조회 실패: {str(e)}"
         }
-
+@mcp.get("/")
+async def root():
+    """Health check endpoint"""
+    return {"status": "ok", "service": "Price Tracker MCP"}
+    
 
 if __name__ == "__main__":
     # 설정 검증
