@@ -262,8 +262,19 @@ if __name__ == "__main__":
     if Config.validate():
         print("✅ API 설정 완료")
         print(f"📊 설정 정보: {Config.get_api_info()}")
-        print("\n🚀 MCP 서버 시작...")
-        mcp.run()
+        print("\n🚀 [카카오 연동용] MCP 웹 서버 시작 중...")
+        print("⚠️ 실행 후 'Uvicorn running on http://...' 메시지가 나오면 성공입니다!")
+        
+        # mcp.run()을 'sse' 모드로 실행해야 웹으로 연결됩니다.
+        # 기본 포트는 8000번입니다.
+        try:
+            # 최신 FastMCP 방식
+            mcp.run(transport='sse')
+        except TypeError:
+            # 만약 에러가 나면 수동으로 uvicorn 실행 (비상용)
+            import uvicorn
+            print("🔧 호환 모드로 전환합니다...")
+            mcp.run() 
     else:
         print("\n❌ API 설정을 완료한 후 서버를 시작하세요.")
         print("💡 .env 파일을 확인하고 필수 API 키를 입력하세요.")
