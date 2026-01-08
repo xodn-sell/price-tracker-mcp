@@ -29,16 +29,20 @@ class PriceTracker:
         logger.info("✅ PriceTracker 초기화 완료")
 
     def search_products(self, keyword: str, count: int = 10) -> List[Dict]:
-        """상품 검색"""
+        """상품 검색 (액세서리 필터링 포함)"""
         logger.info(f"🔍 네이버 쇼핑에서 '{keyword}' 검색 중...")
 
         products = []
+        filtered_count = 0
 
         try:
-            # 네이버 검색 - 올바른 메서드 사용!
+            # 더 많은 결과를 가져와서 필터링 후 원하는 개수 확보
+            fetch_count = count * 3 if self._is_phone_keyword(keyword) else count
+            
+            # 네이버 검색
             result = self.naver.search_products(
                 query=keyword,
-                display=count,
+                display=min(fetch_count, 100),  # 최대 100개
                 sort="sim"
             )
             
@@ -46,38 +50,71 @@ class PriceTracker:
             
             if "items" in result:
                 for item in result["items"]:
+                    price = int(item.get('lprice', 0))
+                    title = self._clean_html(item.get('title', ''))
+                    
+                    # 가격 필터링: 휴대폰은 최소 10만원 이상
+                    if self._is_phone_keyword(keyword) and price < 100000:
+                        logger.debug(f"⏭️ 액세서리 제외: {title} ({price:,}원)")
+                        filtered_count += 1
+                        continue
+                    
+                    # 제목으로 액세서리 필터링
+                    if self._is_accessory(title):
+                        logger.debug(f"⏭️ 액세서리 제외: {title}")
+                        filtered_count += 1
+                        continue
+                    
                     products.append({
                         'platform': '네이버쇼핑',
-                        'title': self._clean_html(item.get('title', '')),
-                        'price': int(item.get('lprice', 0)),
+                        'title': title,
+                        'price': price,
                         'link': item.get('link', ''),
                         'image': item.get('image', ''),
                         'brand': item.get('brand', ''),
                         'maker': item.get('maker', ''),
                         'category': item.get('category1', '')
                     })
+                    
+                    # 원하는 개수만큼 수집했으면 중단
+                    if len(products) >= count:
+                        break
             
-            logger.info(f"✅ {len(products)}개 상품 검색 완료!")
+            logger.info(f"✅ {len(products)}개 상품 검색 완료! ({filtered_count}개 액세서리 필터링됨)")
             
         except Exception as e:
             logger.error(f"❌ 검색 실패: {type(e).__name__}: {e}", exc_info=True)
             
         return products
 
+    def _is_phone_keyword(self, keyword: str) -> bool:
+        """휴대폰 키워드인지 확인"""
+        phone_keywords = [
+            '아이폰', 'iphone', 
+            '갤럭시', 'galaxy',
+            '핸드폰', '스마트폰', '휴대폰',
+            '폰', 'phone'
+        ]
+        keyword_lower = keyword.lower()
+        return any(pk in keyword_lower for pk in phone_keywords)
+    
+    def _is_accessory(self, title: str) -> bool:
+        """액세서리인지 제목으로 판단"""
+        accessory_keywords = [
+            '케이스', '커버', '필름', '보호필름', '강화유리',
+            '케이블', '충전기', '어댑터', '젠더', '이어폰',
+            '스트랩', '링', '홀더', '거치대', '스탠드',
+            '보호대', '범퍼', '카드', '지갑', '파우치'
+        ]
+        title_lower = title.lower()
+        return any(acc in title_lower for acc in accessory_keywords)
+
     def _clean_html(self, text: str) -> str:
         """HTML 태그 제거"""
         return re.sub(r'<[^>]+>', '', text)
 
     def compare_prices(self, keyword: str) -> Dict:
-        """
-        가격 비교 및 최저가 찾기
-
-        Args:
-            keyword: 검색 키워드
-
-        Returns:
-            비교 결과 (최저가, 최고가, 평균가, 상품 목록)
-        """
+        """가격 비교 및 최저가 찾기"""
         logger.info(f"💰 '{keyword}' 가격 비교 중...")
         
         products = self.search_products(keyword, count=20)
@@ -113,16 +150,7 @@ class PriceTracker:
         }
 
     def set_price_alert(self, keyword: str, target_price: int) -> Dict:
-        """
-        가격 알림 설정
-
-        Args:
-            keyword: 상품 키워드
-            target_price: 목표 가격
-
-        Returns:
-            알림 설정 결과
-        """
+        """가격 알림 설정"""
         logger.info(f"🔔 가격 알림 설정: {keyword} -> {target_price:,}원")
         
         alert_id = self.db.add_price_alert(
@@ -141,16 +169,7 @@ class PriceTracker:
         }
 
     def get_price_history(self, keyword: str, days: int = 30) -> List[Dict]:
-        """
-        가격 히스토리 조회
-
-        Args:
-            keyword: 상품 키워드
-            days: 조회 기간 (일)
-
-        Returns:
-            가격 히스토리 목록
-        """
+        """가격 히스토리 조회"""
         logger.info(f"📊 '{keyword}' 가격 히스토리 조회 ({days}일)")
         
         start_date = datetime.now() - timedelta(days=days)
@@ -162,15 +181,7 @@ class PriceTracker:
         return history
 
     def track_product(self, keyword: str) -> Dict:
-        """
-        상품 추적 시작
-
-        Args:
-            keyword: 상품 키워드
-
-        Returns:
-            추적 시작 결과
-        """
+        """상품 추적 시작"""
         logger.info(f"🎯 '{keyword}' 추적 시작...")
         
         # 현재 가격 검색
@@ -207,29 +218,15 @@ class PriceTracker:
         }
 
     def list_tracked_products(self) -> List[Dict]:
-        """
-        추적 중인 상품 목록 조회
-
-        Returns:
-            추적 중인 상품 목록
-        """
+        """추적 중인 상품 목록 조회"""
         logger.info("📋 추적 상품 목록 조회")
         return self.db.get_tracked_products()
 
     def get_best_deals(self, category: Optional[str] = None, limit: int = 10) -> List[Dict]:
-        """
-        베스트 딜 추천
-
-        Args:
-            category: 카테고리 (선택)
-            limit: 결과 개수
-
-        Returns:
-            베스트 딜 목록
-        """
+        """베스트 딜 추천"""
         logger.info(f"🏆 베스트 딜 조회 (limit: {limit})")
         
-        # 인기 키워드 목록 (예시)
+        # 인기 키워드 목록
         keywords = [
             "노트북", "무선이어폰", "스마트워치", "태블릿",
             "키보드", "마우스", "모니터", "웹캠"
@@ -259,12 +256,7 @@ class PriceTracker:
         return best_deals[:limit]
 
     def check_price_alerts(self) -> List[Dict]:
-        """
-        가격 알림 확인
-
-        Returns:
-            알림이 트리거된 항목 목록
-        """
+        """가격 알림 확인"""
         logger.info("🔔 가격 알림 확인 중...")
         
         alerts = self.db.get_price_alerts()
