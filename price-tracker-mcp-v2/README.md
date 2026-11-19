@@ -213,9 +213,8 @@ MIT License
 
 ## 👨‍💻 개발자
 
-**Kim Taewoo** (xodn-sell)
+**xodn-sell**
 - GitHub: https://github.com/xodn-sell
-- 한국기술교육대학교 기계공학부
 
 ---
 

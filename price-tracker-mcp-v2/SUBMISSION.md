@@ -3,7 +3,7 @@
 ## 📌 프로젝트 정보
 
 **프로젝트명:** Price Tracker MCP - 네이버 쇼핑  
-**개발자:** 김태우 (xodn-sell)  
+**개발자:** xodn-sell  
 **GitHub:** https://github.com/xodn-sell/price-tracker-mcp  
 **제출일:** 2026년 1월
 
